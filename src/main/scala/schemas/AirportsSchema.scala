@@ -1,6 +1,8 @@
 package com.example
 package schemas
 
+import constants.DfColumn
+
 import org.apache.spark.sql.types._
 
 object AirportsSchema extends Schema {
@@ -8,13 +10,13 @@ object AirportsSchema extends Schema {
   override def getSchema(): StructType = {
 
     StructType(Seq(
-      StructField(ColumnEnumeration.IATA_CODE, StringType),
-      StructField(ColumnEnumeration.AIRPORT, StringType),
-      StructField(ColumnEnumeration.CITY, StringType),
-      StructField(ColumnEnumeration.STATE, StringType),
-      StructField(ColumnEnumeration.COUNTRY, StringType),
-      StructField(ColumnEnumeration.LATITUDE, FloatType),
-      StructField(ColumnEnumeration.LONGITUDE, FloatType)
+      StructField(DfColumn.IATA_CODE, StringType),
+      StructField(DfColumn.AIRPORT, StringType),
+      StructField(DfColumn.CITY, StringType),
+      StructField(DfColumn.STATE, StringType),
+      StructField(DfColumn.COUNTRY, StringType),
+      StructField(DfColumn.LATITUDE, FloatType),
+      StructField(DfColumn.LONGITUDE, FloatType)
     ))
   }
 

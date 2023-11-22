@@ -1,6 +1,9 @@
 package com.example
 package jobs
 
+import constants.{DfColumn, FilterCondition}
+import writers.HistoricalParquetWriter
+
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.language.postfixOps
@@ -15,16 +18,19 @@ class PopularAirportsJob(spark: SparkSession, jobConfig: JobConfig) extends Flig
   private val checkDirectory: Boolean = historicalData.checkDirectory(pathOfAirportFlightsCounting)
   private val airportFlightsCounting: DataFrame => DataFrame = ag.airportFlightsCounting("COUNT_FLIGHTS")
   private val top10Airports: DataFrame => DataFrame = f.filterTop10("COUNT_FLIGHTS", "desc")
+  private val filterNotCancelled: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.NotCancelledCondition)
+  private val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
+  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, checkHistoricalData, readerParquet, writerParquet)
 
   private val airportFlightsDF: DataFrame = flightsDF
-    .transform(f.filterNotCancelled)
+    .transform(filterNotCancelled)
     .transform(airportFlightsCounting)
 
   private val aggregatedDataForTopAirportsDF: DataFrame = {
     if(checkDirectory){
       val rawDataDF: DataFrame = historicalData.initWithHistoricalData(
         readerParquet,
-        Seq(ColumnEnumeration.ORIGIN_AIRPORT),
+        Seq(DfColumn.ORIGIN_AIRPORT),
         pathOfHistoricalData
         )(airportFlightsDF)
       val dataWithoutNullDF: DataFrame = dataProcessing.fillGaps(
@@ -48,12 +54,8 @@ class PopularAirportsJob(spark: SparkSession, jobConfig: JobConfig) extends Flig
 
   override def run(): Unit = {
 
-    writerParquet.writeResult(pathOfTopAirports)(topAirportsDF)
-
-    val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
-
-    writerParquet.writeHistoricalData(pathOfHistoricalData, pathOfTempData, checkHistoricalData, readerParquet)(aggregatedDataForTopAirportsDF)
-
+    writerParquet.write(pathOfTopAirports)(topAirportsDF)
+    historicalWriter.write(pathOfHistoricalData)(aggregatedDataForTopAirportsDF)
 
   }
 

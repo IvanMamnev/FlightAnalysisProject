@@ -1,15 +1,16 @@
 package com.example
+package constants
 
 import scala.language.implicitConversions
 
-object ColumnEnumeration extends  ColumnEnumeration {
+object DfColumn extends  DfColumn {
 
-  implicit def columnToString(col: ColumnEnumeration.Value): String = col.toString
+  implicit def columnToString(col: DfColumn.Value): String = col.toString
 
 
 }
 
- trait ColumnEnumeration extends Enumeration {
+ trait DfColumn extends Enumeration {
 
   val IATA_CODE,
   AIRLINE,

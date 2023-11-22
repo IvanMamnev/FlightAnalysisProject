@@ -5,28 +5,18 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
 
 
 object DataframeCsvWriter {
-
-  case class Config(path: String = "")
+  case class Config(hasHeader: Boolean, saveMode: SaveMode)
 }
 
 class DataframeCsvWriter(config: DataframeCsvWriter.Config) extends DataframeWriter {
 
-  override def write(df: DataFrame): Unit = {
+  override def write(path: String)(df: DataFrame): Unit = {
 
     df.write
       .format("csv")
-      .save(config.path)
-
-  }
-
-  def writeMetaInfo(df: DataFrame): Unit = {
-
-    df.write
-      .format("csv")
-      .mode(SaveMode.Append)
-      .option("header", "true")
-      .save("src/main/resources/meta_info.csv")
-
+      .mode(config.saveMode)
+      .option("header", config.hasHeader)
+      .save(path)
   }
 
 }

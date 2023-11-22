@@ -5,7 +5,7 @@ import org.apache.spark.sql.DataFrame
 
 trait DataframeWriter {
 
-  def write(df: DataFrame): Unit = {
+  def write(path: String)(df: DataFrame): Unit = {
 
   }
 

@@ -1,5 +1,5 @@
 package com.example
-package jobs
+package configs
 
 object Config {
 

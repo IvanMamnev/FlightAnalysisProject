@@ -1,6 +1,9 @@
 package com.example
 package jobs
 
+import constants.{DfColumn, FilterCondition}
+import writers.HistoricalParquetWriter
+
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.language.postfixOps
@@ -13,17 +16,21 @@ class TopOnTimeAirlinesAtAirport(spark: SparkSession, jobConfig: JobConfig) exte
   private val pathOfHistoricalData: String = s"$pathOfOnTimeAirlinesAtAirport/historical_data"
   private val pathOfTopAirlines: String = s"$pathOfOnTimeAirlinesAtAirport/top_airlines_at_airport"
   private val pathOfTempData: String = s"src/main/resources/temp/$yearOfAnalysis/airlines_at_airport"
+  private val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
+  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, checkHistoricalData, readerParquet, writerParquet)
+
+  private val filterOnTimeDeparture: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.OnTimeDepartureCondition)
   private val airlineFlightsAtAirport: DataFrame => DataFrame = ag
     .parameterFlightsCountingAtAirports(
-      ColumnEnumeration.AIRLINE,
+      DfColumn.AIRLINE,
       "COUNT_FLIGHTS")
   private val rankedAirlineFlightsAtAirport: DataFrame => DataFrame = ag
     .parameterFlightsRankingAtAirports(
-      ColumnEnumeration.AIRLINE,
+      DfColumn.AIRLINE,
       "COUNT_FLIGHTS")
-  private val top10AirlinesAtAirport: DataFrame => DataFrame = f.filterTop10(ColumnEnumeration.ORIGIN_AIRPORT, "asc")
+  private val top10AirlinesAtAirport: DataFrame => DataFrame = f.filterTop10(DfColumn.ORIGIN_AIRPORT, "asc")
   private val airlineFlightsAtAirportDF: DataFrame = flightsDF
-    .transform(f.filterOnTimeDeparture)
+    .transform(filterOnTimeDeparture)
     .transform(airlineFlightsAtAirport)
 
   private val checkDirectory: Boolean = historicalData.checkDirectory(pathOfOnTimeAirlinesAtAirport)
@@ -32,8 +39,8 @@ class TopOnTimeAirlinesAtAirport(spark: SparkSession, jobConfig: JobConfig) exte
     if(checkDirectory){
       val rawDataDF: DataFrame = historicalData.initWithHistoricalData(
         readerParquet,
-        Seq(ColumnEnumeration.ORIGIN_AIRPORT,
-          ColumnEnumeration.AIRLINE),
+        Seq(DfColumn.ORIGIN_AIRPORT,
+          DfColumn.AIRLINE),
         pathOfHistoricalData
       )(airlineFlightsAtAirportDF)
       val dataWithoutNullDF: DataFrame =
@@ -57,12 +64,9 @@ class TopOnTimeAirlinesAtAirport(spark: SparkSession, jobConfig: JobConfig) exte
 
   override def run(): Unit = {
 
-    writerParquet.writeResult(pathOfTopAirlines)(topAirlinesAtAirportDF)
-
-    val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
-
-    writerParquet
-      .writeHistoricalData(pathOfHistoricalData, pathOfTempData, checkHistoricalData, readerParquet)(aggregatedDataForTopAirlinesAtAirportDF)
+    writerParquet.write(pathOfTopAirlines)(topAirlinesAtAirportDF)
+    historicalWriter
+      .write(pathOfHistoricalData)(aggregatedDataForTopAirlinesAtAirportDF)
 
   }
 

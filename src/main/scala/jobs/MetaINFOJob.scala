@@ -4,6 +4,7 @@ package jobs
 import metrics.DataAggregation
 import readers.DataframeCsvReader
 import transformers.DataConverter
+import validator.{ColumnValidator, DfValidator}
 import writers.DataframeCsvWriter
 
 import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
@@ -14,10 +15,12 @@ import java.util.Calendar
 class MetaINFOJob(spark: SparkSession, jobConfig: JobConfig) extends Job(spark, jobConfig) {
 
   override val nameOfJob: String = "Meta INFO Job"
+  private val pathOfMetaInfo: String = "src/main/resources/meta_info.csv"
   private val readerCSV: DataframeCsvReader = new DataframeCsvReader(spark, jobConfig.readerCSVConfig)
   private val writerCSV: DataframeCsvWriter = new DataframeCsvWriter(jobConfig.writerCSVConfig)
-  private val flightsDF: DataFrame = readerCSV.read()
-  private val ag: DataAggregation = new DataAggregation
+  private val flightsDF: DataFrame = readerCSV.read(jobConfig.pathOfInputData)
+  private val validator: DfValidator = new ColumnValidator
+  private val ag: DataAggregation = new DataAggregation(validator)
   private val cnvrt: DataConverter = new DataConverter
 
 
@@ -37,7 +40,7 @@ class MetaINFOJob(spark: SparkSession, jobConfig: JobConfig) extends Job(spark, 
 
   override def run(): Unit = {
 
-    writerCSV.writeMetaInfo(metaInfoDF)
+    writerCSV.write(pathOfMetaInfo)(metaInfoDF)
 
   }
 

@@ -1,49 +1,50 @@
 package com.example
 package metrics
 
-import exeption_handing.DfValidator
+import constants.DfColumn
+import validator.DfValidator
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions.{col, count, dense_rank, sum}
 
-class DataAggregation extends DfValidator{
+class DataAggregation(validator: DfValidator) {
 
   def airportFlightsCounting(aggregatedColumnName: String)(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.ORIGIN_AIRPORT))(df)
-    df.groupBy(col(ColumnEnumeration.ORIGIN_AIRPORT))
+    validator.validateColumnPresence(Seq(DfColumn.ORIGIN_AIRPORT))(df)
+    df.groupBy(col(DfColumn.ORIGIN_AIRPORT))
       .agg(count("*").as(aggregatedColumnName))
   }
 
   def airlineFlightsCounting(aggregatedColumnName: String)(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.AIRLINE))(df)
-    df.groupBy(col(ColumnEnumeration.AIRLINE))
+    validator.validateColumnPresence(Seq(DfColumn.AIRLINE))(df)
+    df.groupBy(col(DfColumn.AIRLINE))
       .agg(count("*").as(aggregatedColumnName))
   }
 
   def parameterFlightsCountingAtAirports(columnName: String, aggregatedColumnName: String)(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(
-      ColumnEnumeration.ORIGIN_AIRPORT,
+    validator.validateColumnPresence(Seq(
+      DfColumn.ORIGIN_AIRPORT,
       columnName))(df)
 
-    df.groupBy(col(ColumnEnumeration.ORIGIN_AIRPORT),
+    df.groupBy(col(DfColumn.ORIGIN_AIRPORT),
         col(columnName)
       )
       .agg(count("*").as(aggregatedColumnName))
   }
 
   def parameterFlightsRankingAtAirports(columnName: String, basisOfRanking: String)(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(
-      ColumnEnumeration.ORIGIN_AIRPORT,
+    validator.validateColumnPresence(Seq(
+      DfColumn.ORIGIN_AIRPORT,
       columnName,
       basisOfRanking
     ))(df)
 
-    val windowRank = Window.partitionBy(col(ColumnEnumeration.ORIGIN_AIRPORT))
+    val windowRank = Window.partitionBy(col(DfColumn.ORIGIN_AIRPORT))
       .orderBy(col(basisOfRanking))
 
     df.select(
-      col(ColumnEnumeration.ORIGIN_AIRPORT),
+      col(DfColumn.ORIGIN_AIRPORT),
       col(columnName),
       col(basisOfRanking),
       dense_rank().over(windowRank).as("RANK"))
@@ -51,57 +52,57 @@ class DataAggregation extends DfValidator{
   }
 
   def flightsByDayOfWeek(aggregatedColumnName: String)(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.DAY_OF_WEEK))(df)
-    df.groupBy(col(ColumnEnumeration.DAY_OF_WEEK))
+    validator.validateColumnPresence(Seq(DfColumn.DAY_OF_WEEK))(df)
+    df.groupBy(col(DfColumn.DAY_OF_WEEK))
       .agg(count("*").as(aggregatedColumnName))
   }
 
   def totalTimeDelayReasons(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.DEPARTURE_DELAY))(df)
-    df.agg(sum(col(ColumnEnumeration.DEPARTURE_DELAY)).as("TOTAL_DELAY"))
+    validator.validateColumnPresence(Seq(DfColumn.DEPARTURE_DELAY))(df)
+    df.agg(sum(col(DfColumn.DEPARTURE_DELAY)).as("TOTAL_DELAY"))
   }
 
   def totalTimeAirSystemDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.AIR_SYSTEM_DELAY))(df)
-    df.agg(sum(col(ColumnEnumeration.AIR_SYSTEM_DELAY)).as("TOTAL_AIR_SYSTEM_DELAY"))
+    validator.validateColumnPresence(Seq(DfColumn.AIR_SYSTEM_DELAY))(df)
+    df.agg(sum(col(DfColumn.AIR_SYSTEM_DELAY)).as("TOTAL_AIR_SYSTEM_DELAY"))
   }
 
   def totalTimeSecurityDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.SECURITY_DELAY))(df)
-    df.agg(sum(col(ColumnEnumeration.SECURITY_DELAY)).as("TOTAL_SECURITY_DELAY"))
+    validator.validateColumnPresence(Seq(DfColumn.SECURITY_DELAY))(df)
+    df.agg(sum(col(DfColumn.SECURITY_DELAY)).as("TOTAL_SECURITY_DELAY"))
   }
 
   def totalTimeAirlineDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.AIRLINE_DELAY))(df)
-    df.agg(sum(col(ColumnEnumeration.AIRLINE_DELAY)).as("TOTAL_AIRLINE_DELAY"))
+    validator.validateColumnPresence(Seq(DfColumn.AIRLINE_DELAY))(df)
+    df.agg(sum(col(DfColumn.AIRLINE_DELAY)).as("TOTAL_AIRLINE_DELAY"))
   }
 
   def totalTimeLateAircraftDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.LATE_AIRCRAFT_DELAY))(df)
-    df.agg(sum(col(ColumnEnumeration.LATE_AIRCRAFT_DELAY)))
+    validator.validateColumnPresence(Seq(DfColumn.LATE_AIRCRAFT_DELAY))(df)
+    df.agg(sum(col(DfColumn.LATE_AIRCRAFT_DELAY)))
   }
 
   def totalTimeWeatherDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.WEATHER_DELAY))(df)
-    df.agg(sum(col(ColumnEnumeration.WEATHER_DELAY)))
+    validator.validateColumnPresence(Seq(DfColumn.WEATHER_DELAY))(df)
+    df.agg(sum(col(DfColumn.WEATHER_DELAY)))
   }
 
   def groupingFlightByDate(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(
-      ColumnEnumeration.YEAR,
-      ColumnEnumeration.MONTH,
-      ColumnEnumeration.DAY
+    validator.validateColumnPresence(Seq(
+      DfColumn.YEAR,
+      DfColumn.MONTH,
+      DfColumn.DAY
     ))(df)
     df.groupBy(
-      col(ColumnEnumeration.YEAR),
-      col(ColumnEnumeration.MONTH),
-      col(ColumnEnumeration.DAY)
+      col(DfColumn.YEAR),
+      col(DfColumn.MONTH),
+      col(DfColumn.DAY)
     )
       .mean()
       .orderBy(
-        col(ColumnEnumeration.YEAR),
-        col(ColumnEnumeration.MONTH),
-        col(ColumnEnumeration.DAY)
+        col(DfColumn.YEAR),
+        col(DfColumn.MONTH),
+        col(DfColumn.DAY)
       )
   }
 

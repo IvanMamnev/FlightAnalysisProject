@@ -7,24 +7,30 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object DataframeCsvReader {
 
-  case class Config(hasHeader: Boolean = true, separator: String = ",", path: String, schema: StructType = StructType(Seq()))
+  case class Config(hasHeader: Boolean, separator: String, schema: StructType)
 }
 
 class DataframeCsvReader(spark: SparkSession, config: DataframeCsvReader.Config) extends DataFrameReader {
 
-  override def read(): DataFrame = {
+  private val defaultOptions = Map(
+    "header" -> config.hasHeader.toString,
+    "sep" -> config.separator)
 
-    if (config.schema.isEmpty) {
-      spark.read
-        .option("header", config.hasHeader)
-        .option("sep", config.separator)
-        .csv(config.path)
-    } else {
-      spark.read
-        .option("header", config.hasHeader)
-        .option("sep", config.separator)
-        .schema(config.schema)
-        .csv(config.path)
-    }
+  private def readWithSchema(options: Map[String, String], path: String): DataFrame = {
+    spark.read
+      .options(options)
+      .schema(config.schema)
+      .csv(path)
+  }
+
+  private def readWithoutSchema(options: Map[String, String], path: String): DataFrame = {
+    spark.read
+      .options(options)
+      .csv(path)
+  }
+
+  override def read(path: String): DataFrame = {
+    if (config.schema.isEmpty) readWithoutSchema(defaultOptions, path)
+    else readWithSchema(defaultOptions, path)
   }
 }

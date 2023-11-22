@@ -2,11 +2,12 @@ package com.example
 
 import exeption_handing.SaveRunner
 import jobs.{GeneralJob, JobConfig}
-import readers.{DataFrameParquetReader, DataframeCsvReader}
+import readers.DataframeCsvReader
 import schemas.FlightsSchema
 import writers.{DataframeCsvWriter, DataframeParquetWriter}
 
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.sql.SaveMode
 
 import scala.language.postfixOps
 import scala.sys.process._
@@ -22,12 +23,13 @@ object FlightAnalyzer extends SessionWrapper {
     val job = new GeneralJob(
       spark, JobConfig(
         DataframeCsvReader.Config(
-          path = args(0),
+          hasHeader = true,
+          separator = ",",
           schema = FlightsSchema.getSchema()
         ),
-        DataFrameParquetReader.Config(),
-        DataframeCsvWriter.Config(),
-        DataframeParquetWriter.Config()
+        DataframeCsvWriter.Config(hasHeader = true, saveMode = SaveMode.Append),
+        DataframeParquetWriter.Config(saveMode = SaveMode.Overwrite),
+        args(0)
       )
     )
 

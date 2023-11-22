@@ -3,21 +3,12 @@ package readers
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-object DataFrameParquetReader {
-  case class Config(path: String = "")
-}
 
-class DataFrameParquetReader(spark: SparkSession, config: DataFrameParquetReader.Config) extends DataFrameReader {
+class DataFrameParquetReader(spark: SparkSession) extends DataFrameReader {
 
-  override def read(): DataFrame = {
-    spark.read
-      .parquet(config.path)
-  }
-
-  def readDataFromPath(path: String): DataFrame = {
+  override def read(path: String): DataFrame = {
     spark.read
       .parquet(path)
   }
-
 
 }

@@ -1,6 +1,9 @@
 package com.example
 package jobs
 
+import constants.{DfColumn, FilterCondition}
+import writers.HistoricalParquetWriter
+
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.language.postfixOps
@@ -14,10 +17,14 @@ class TopOnTimeAirlines(spark: SparkSession, jobConfig: JobConfig) extends Fligh
   private val pathOfTempData: String = s"src/main/resources/temp/$yearOfAnalysis/airline_flights_counting"
   private val airlineFlightsCounting: DataFrame => DataFrame = ag.airlineFlightsCounting("FLIGHTS_WITHOUT_DELAYS")
   private val top10Airlines: DataFrame => DataFrame = f.filterTop10("FLIGHTS_WITHOUT_DELAYS", "desc")
+  private val filterOnTimeDeparture: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.OnTimeDepartureCondition)
+  private val filterOnTimeArrival: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.OnTimeArrivalCondition)
+  private val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
+  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, checkHistoricalData, readerParquet, writerParquet)
 
   private val airlineFlightsDF: DataFrame = flightsDF
-    .transform(f.filterOnTimeDeparture)
-    .transform(f.filterOnTimeArrival)
+    .transform(filterOnTimeDeparture)
+    .transform(filterOnTimeArrival)
     .transform(airlineFlightsCounting)
 
   private val checkDirectory: Boolean = historicalData.checkDirectory(pathOfAirlineFlightsCounting)
@@ -26,7 +33,7 @@ class TopOnTimeAirlines(spark: SparkSession, jobConfig: JobConfig) extends Fligh
     if(checkDirectory){
       val rawDataDF: DataFrame = historicalData.initWithHistoricalData(
         readerParquet,
-        Seq(ColumnEnumeration.AIRLINE),
+        Seq(DfColumn.AIRLINE),
         pathOfHistoricalData
       )(airlineFlightsDF)
       val dataWithoutNullDF: DataFrame =
@@ -50,13 +57,9 @@ class TopOnTimeAirlines(spark: SparkSession, jobConfig: JobConfig) extends Fligh
 
   override def run(): Unit = {
 
-    writerParquet.writeResult(pathOfTopAirlines)(topAirlinesDF)
-
-    val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
-
-    writerParquet
-      .writeHistoricalData(pathOfHistoricalData, pathOfTempData, checkHistoricalData, readerParquet)(aggregatedDataForTopAirlinesDF)
-
+    writerParquet.write(pathOfTopAirlines)(topAirlinesDF)
+    historicalWriter
+      .write(pathOfHistoricalData)(aggregatedDataForTopAirlinesDF)
 
   }
 

@@ -1,6 +1,6 @@
 package com.example
 
-import jobs.Config
+import configs.Config
 
 import org.apache.spark.sql.SparkSession
 

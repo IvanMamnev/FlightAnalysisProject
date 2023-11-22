@@ -1,13 +1,15 @@
 package com.example
-package exeption_handing
+package validator
 
 import org.apache.spark.sql.DataFrame
 
 trait DfValidator {
 
   def validateColumnPresence(requiredCols: Seq[String])(df: DataFrame): Unit = {
-    val checker = new ColumnChecker(df, requiredCols)
-    checker.validateColumnPresence()
+    validate(requiredCols)(df)
+  }
+  protected def validate (requiredCols: Seq[String])(df: DataFrame): Unit = {
+
   }
 
 }

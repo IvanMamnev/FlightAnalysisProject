@@ -1,6 +1,9 @@
 package com.example
 package jobs
 
+import constants.FilterCondition
+import writers.HistoricalParquetWriter
+
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.language.postfixOps
@@ -15,9 +18,17 @@ class DelayReasonsRatioJob(spark: SparkSession, jobConfig: JobConfig) extends Fl
   private val pathOfDelaysSetOfIndicators: String = s"$pathOfDelayReasonsRatio/delay_reasons_set_of_indicator"
   private val pathOfTempData: String = s"src/main/resources/temp/$yearOfAnalysis/delay_reasons_ratio"
   private val checkDirectory: Boolean = historicalData.checkDirectory(pathOfDelayReasonsRatio)
+  private val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
+  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, checkHistoricalData, readerParquet, writerParquet)
+  private val filterWithAirSystemDelay: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.WithAirSystemDelayCondition)
+  private val filterWithSecurityDelay: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.WithSecurityDelayCondition)
+  private val filterWithAirlineDelay: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.WithAirlineDelayCondition)
+  private val filterWithLateAircraftDelay: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.WithLateAircraftDelayCondition)
+  private val filterWithWeatherDelay: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.WithWeatherDelayCondition)
+  private val filterWithDepartureDelay: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.WithDepartureDelayCondition)
 
   private val airSystemDelayDF: DataFrame = flightsDF
-    .transform(f.filterWithAirSystemDelay)
+    .transform(filterWithAirSystemDelay)
   private val flightsAirSystemDelay: Long = airSystemDelayDF.count()
   private val totalTimeAirSystemDelayDF: DataFrame = airSystemDelayDF
     .transform(ag.totalTimeAirSystemDelay)
@@ -26,7 +37,7 @@ class DelayReasonsRatioJob(spark: SparkSession, jobConfig: JobConfig) extends Fl
   )
 
   private val securityDelayDF: DataFrame = flightsDF
-    .transform(f.filterWithSecurityDelay)
+    .transform(filterWithSecurityDelay)
   private val flightsSecurityDelay: Long = securityDelayDF.count()
   private val totalTimeSecurityDelayDF: DataFrame = securityDelayDF
     .transform(ag.totalTimeSecurityDelay)
@@ -35,7 +46,7 @@ class DelayReasonsRatioJob(spark: SparkSession, jobConfig: JobConfig) extends Fl
   )
 
   private val airlineDelayDF: DataFrame = flightsDF
-    .transform(f.filterWithAirlineDelay)
+    .transform(filterWithAirlineDelay)
   private val flightsAirlineDelay: Long = airlineDelayDF.count()
   private val totalTimeAirlineDelayDF: DataFrame = airlineDelayDF
     .transform(ag.totalTimeAirlineDelay)
@@ -44,7 +55,7 @@ class DelayReasonsRatioJob(spark: SparkSession, jobConfig: JobConfig) extends Fl
   )
 
   private val lateTimeAircraftDelayDF: DataFrame = flightsDF
-    .transform(f.filterWithLateAircraftDelay)
+    .transform(filterWithLateAircraftDelay)
   private val flightsLateTimeAircraftDelay: Long = lateTimeAircraftDelayDF.count()
   private val totalTimeLateAircraftDelayDF: DataFrame = lateTimeAircraftDelayDF
     .transform(ag.totalTimeLateAircraftDelay)
@@ -53,7 +64,7 @@ class DelayReasonsRatioJob(spark: SparkSession, jobConfig: JobConfig) extends Fl
   )
 
   private val weatherDelayDF: DataFrame = flightsDF
-    .transform(f.filterWithWeatherDelay)
+    .transform(filterWithWeatherDelay)
   private val flightsWeatherDelayDF: Long = weatherDelayDF.count()
   private val totalTimeWeatherDelayDF: DataFrame = weatherDelayDF
     .transform(ag.totalTimeWeatherDelay)
@@ -63,7 +74,7 @@ class DelayReasonsRatioJob(spark: SparkSession, jobConfig: JobConfig) extends Fl
   )
 
   private val totalTimeDelayDF: DataFrame = flightsDF
-    .transform(f.filterWithDepartureDelay)
+    .transform(filterWithDepartureDelay)
     .transform(ag.totalTimeDelayReasons)
   private val totalTimeDelayReasons: Float = cnvrt.totalTimeToFloat(
     totalTimeDelayDF
@@ -112,11 +123,8 @@ class DelayReasonsRatioJob(spark: SparkSession, jobConfig: JobConfig) extends Fl
 
   override def run(): Unit = {
 
-    writerParquet.writeResult(pathOfDelaysSetOfIndicators)(resultDelayReasonsDF)
-
-    val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
-
-    writerParquet.writeHistoricalData(pathOfHistoricalData, pathOfTempData, checkHistoricalData, readerParquet)(resultDelayReasonsDF)
+    writerParquet.write(pathOfDelaysSetOfIndicators)(resultDelayReasonsDF)
+    historicalWriter.write(pathOfHistoricalData)(resultDelayReasonsDF)
 
   }
 }

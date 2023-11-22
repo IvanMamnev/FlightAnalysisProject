@@ -19,7 +19,7 @@ class HistoricalData {
     joinColumnName: Seq[String],
     path: String)(df: DataFrame): DataFrame = {
 
-    val dataDF = reader.readDataFromPath(path)
+    val dataDF = reader.read(path)
 
     if(dataDF.isEmpty) {
       df

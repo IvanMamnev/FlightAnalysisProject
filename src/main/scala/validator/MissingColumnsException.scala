@@ -1,5 +1,5 @@
 package com.example
-package exeption_handing
+package validator
 
 case class MissingColumnsException(msg: String) extends Exception(msg)
 

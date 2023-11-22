@@ -1,15 +1,15 @@
 package com.example
 package preprocessing
 
-import exeption_handing.DfValidator
+import validator.DfValidator
 
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.{coalesce, col, lit}
+import org.apache.spark.sql.{Column, DataFrame}
 
-class DataProcessing extends DfValidator {
+class DataProcessing(validator: DfValidator) {
 
   def fillGaps(columns: Seq[String])(df: DataFrame): DataFrame = {
-    validateColumnPresence(columns)(df)
+    validator.validateColumnPresence(columns)(df)
     columns match {
       case Seq(historicalName, historicalValue, name, value) =>
         df.select(
@@ -39,39 +39,30 @@ class DataProcessing extends DfValidator {
         )
     }
   }
-
+  private def plusTwoColumns(pairs: Seq[(String, String)])(df: DataFrame): DataFrame = {
+    val newColumns: Map[String, Column] = pairs.map(pair =>
+      pair._1 -> col(pair._1).plus(col(pair._2))
+    ).toMap
+    df.withColumns(
+      newColumns
+    )
+  }
   def combineData(columns: Seq[String])(df: DataFrame): DataFrame = {
-    validateColumnPresence(columns)(df)
+    validator.validateColumnPresence(columns)(df)
     columns match {
-      case Seq(name, value, historicalValue) =>
-        df.withColumn(
-          value,
-          col(value).plus(col(historicalValue)).as(value)
-        )
-        .select(
-          col(name),
-          col(value)
-        )
-      case Seq(firstName, secondName, value, historicalValue) =>
-        df.withColumn(
-          value,
-          col(value).plus(col(historicalValue)).as(value)
-        )
-        .select(
-          col(firstName),
-          col(secondName),
-          col(value)
-        )
+
       case Seq(name, historicalValueOfFlights, valueOfFlights,
       historicalValueOfTime, valueOfTime,
       historicalValueOfTotalTime, valueOfTotalTime) =>
-        df.withColumns(
-          Map(
-            valueOfFlights -> col(valueOfFlights).plus(col(historicalValueOfFlights)),
-            valueOfTime -> col(valueOfTime).plus(col(historicalValueOfTime)),
-            valueOfTotalTime -> col(valueOfTotalTime).plus(col(historicalValueOfTotalTime)),
+
+        val sumOfColumns: DataFrame => DataFrame = plusTwoColumns(
+          Seq(
+            (valueOfFlights, historicalValueOfFlights),
+            (valueOfTime, historicalValueOfTime),
+            (valueOfTotalTime, historicalValueOfTotalTime)
           )
         )
+        df.transform(sumOfColumns)
         .withColumn("PERCENT", col(valueOfTime)/col(valueOfTotalTime)*lit(100))
         .select(
           col(name),
@@ -80,6 +71,18 @@ class DataProcessing extends DfValidator {
           col(valueOfTotalTime),
           col("PERCENT")
         )
+
+      case _ =>
+        val columnForSum: Seq[String] = columns.takeRight(2)
+        val pair: Seq[(String, String)] = Seq(
+          (columnForSum.head, columnForSum(1))
+        )
+        val columnForSelect = columns
+          .dropRight(1)
+          .map(colName => col(colName))
+        val res = plusTwoColumns(pair)(df)
+          .select(columnForSelect: _*)
+        res
     }
   }
 

@@ -1,6 +1,9 @@
 package com.example
 package jobs
 
+import constants.{DfColumn, FilterCondition}
+import writers.HistoricalParquetWriter
+
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import scala.language.postfixOps
@@ -16,17 +19,21 @@ class TopDaysOfWeakByFlights(spark: SparkSession, jobConfig: JobConfig) extends 
   private val checkDirectory: Boolean = historicalData.checkDirectory(pathOfDaysOfWeakAnalysis)
   private val flightsByDaysOfWeek: DataFrame => DataFrame = ag.flightsByDayOfWeek("COUNT_FLIGHTS")
   private val topDaysOfWeek: DataFrame => DataFrame = f.filterTop10("COUNT_FLIGHTS", "desc")
+  private val filterOnTimeDeparture: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.OnTimeDepartureCondition)
+  private val filterOnTimeArrival: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.OnTimeArrivalCondition)
+  private val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
+  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, checkHistoricalData, readerParquet, writerParquet)
 
   private val daysOfWeekByFlightsDF: DataFrame = flightsDF
-    .transform(f.filterOnTimeDeparture)
-    .transform(f.filterOnTimeArrival)
+    .transform(filterOnTimeDeparture)
+    .transform(filterOnTimeArrival)
     .transform(flightsByDaysOfWeek)
 
   private val aggregatedDataForTopDaysOfWeakDF: DataFrame = {
     if (checkDirectory) {
       val rawDataDF: DataFrame = historicalData.initWithHistoricalData(
         readerParquet,
-        Seq(ColumnEnumeration.DAY_OF_WEEK),
+        Seq(DfColumn.DAY_OF_WEEK),
         pathOfHistoricalData
       )(daysOfWeekByFlightsDF)
       val dataWithoutNullDF: DataFrame = dataProcessing.fillGaps(
@@ -50,12 +57,8 @@ class TopDaysOfWeakByFlights(spark: SparkSession, jobConfig: JobConfig) extends 
 
   override def run(): Unit = {
 
-    writerParquet.writeResult(pathOfTopDaysOfWeak)(topDaysOfWeakByFlightsDF)
-
-    val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
-
-    writerParquet.writeHistoricalData(pathOfHistoricalData, pathOfTempData, checkHistoricalData, readerParquet)(aggregatedDataForTopDaysOfWeakDF)
-
+    writerParquet.write(pathOfTopDaysOfWeak)(topDaysOfWeakByFlightsDF)
+    historicalWriter.write(pathOfHistoricalData)(aggregatedDataForTopDaysOfWeakDF)
 
   }
 

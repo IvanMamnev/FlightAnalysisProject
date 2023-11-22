@@ -1,32 +1,30 @@
 package com.example
 package transformers
 
-import exeption_handing.DfValidator
+import validator.DfValidator
 
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.{Column, DataFrame}
 
-class DataFiltering extends DfValidator {
+class DataFiltering(validator: DfValidator) {
 
-  def filterNotCancelled(df: DataFrame): DataFrame = {
+  private def getColumnNameFromCondition(condition: Column): String = {
 
-    validateColumnPresence(Seq(ColumnEnumeration.CANCELLED))(df)
-    df.filter(col(ColumnEnumeration.CANCELLED) === 0)
+    condition.toString()
+      .split(" ")(0)
+      .tail
   }
 
-  def filterOnTimeDeparture(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.DEPARTURE_DELAY))(df)
-    df.filter(col(ColumnEnumeration.DEPARTURE_DELAY) === 0)
+  def filterWithCondition(condition: Column)(df: DataFrame): DataFrame = {
 
+    val columnName: String = getColumnNameFromCondition(condition)
+    validator.validateColumnPresence(Seq(columnName))(df)
+    df.filter(condition)
   }
 
-  def filterOnTimeArrival(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.ARRIVAL_DELAY))(df)
-    df.filter(col(ColumnEnumeration.ARRIVAL_DELAY) === 0)
-  }
 
   def filterTop10(colName: String, sortType: String)(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(colName))(df)
+    validator.validateColumnPresence(Seq(colName))(df)
 
       require(Array("asc", "desc").contains(sortType),
       "Incorrect sort type")
@@ -55,36 +53,5 @@ class DataFiltering extends DfValidator {
         }
     }
   }
-
-  def filterWithDepartureDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.DEPARTURE_DELAY))(df)
-    df.filter(col(ColumnEnumeration.DEPARTURE_DELAY) > 0)
-  }
-
-  def filterWithAirSystemDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.AIR_SYSTEM_DELAY))(df)
-    df.filter(col(ColumnEnumeration.AIR_SYSTEM_DELAY) > 0)
-  }
-
-  def filterWithSecurityDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.SECURITY_DELAY))(df)
-    df.filter(col(ColumnEnumeration.SECURITY_DELAY) > 0)
-  }
-
-  def filterWithAirlineDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.AIRLINE_DELAY))(df)
-    df.filter(col(ColumnEnumeration.AIRLINE_DELAY) > 0)
-  }
-
-  def filterWithLateAircraftDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.LATE_AIRCRAFT_DELAY))(df)
-    df.filter(col(ColumnEnumeration.LATE_AIRCRAFT_DELAY) > 0)
-  }
-
-  def filterWithWeatherDelay(df: DataFrame): DataFrame = {
-    validateColumnPresence(Seq(ColumnEnumeration.WEATHER_DELAY))(df)
-    df.filter(col(ColumnEnumeration.WEATHER_DELAY) > 0)
-  }
-
 
 }
