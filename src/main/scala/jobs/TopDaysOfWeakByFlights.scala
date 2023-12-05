@@ -16,13 +16,13 @@ class TopDaysOfWeakByFlights(spark: SparkSession, jobConfig: JobConfig) extends 
   private val pathOfHistoricalData: String = s"$pathOfDaysOfWeakAnalysis/historical_data"
   private val pathOfTopDaysOfWeak: String = s"$pathOfDaysOfWeakAnalysis/top_days_of_weak"
   private val pathOfTempData: String = s"src/main/resources/temp/$yearOfAnalysis/days_of_weak_by_flights"
-  private val checkDirectory: Boolean = historicalData.checkDirectory(pathOfDaysOfWeakAnalysis)
-  private val flightsByDaysOfWeek: DataFrame => DataFrame = ag.flightsByDayOfWeek("COUNT_FLIGHTS")
+  private val hasDirectory: Boolean = historicalData.checkDirectory(pathOfDaysOfWeakAnalysis)
+  private val flightsByDaysOfWeek: DataFrame => DataFrame = ag.aggregationByColumn(Seq(DfColumn.DAY_OF_WEEK), "COUNT_FLIGHTS")
   private val topDaysOfWeek: DataFrame => DataFrame = f.filterTop10("COUNT_FLIGHTS", "desc")
   private val filterOnTimeDeparture: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.OnTimeDepartureCondition)
   private val filterOnTimeArrival: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.OnTimeArrivalCondition)
-  private val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
-  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, checkHistoricalData, readerParquet, writerParquet)
+  private val hasHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
+  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, hasHistoricalData, readerParquet, writerParquet)
 
   private val daysOfWeekByFlightsDF: DataFrame = flightsDF
     .transform(filterOnTimeDeparture)
@@ -30,7 +30,7 @@ class TopDaysOfWeakByFlights(spark: SparkSession, jobConfig: JobConfig) extends 
     .transform(flightsByDaysOfWeek)
 
   private val aggregatedDataForTopDaysOfWeakDF: DataFrame = {
-    if (checkDirectory) {
+    if (hasDirectory) {
       val rawDataDF: DataFrame = historicalData.initWithHistoricalData(
         readerParquet,
         Seq(DfColumn.DAY_OF_WEEK),

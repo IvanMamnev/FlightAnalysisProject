@@ -2,7 +2,7 @@ package com.example
 package jobs
 
 import metrics.DataAggregation
-import preprocessing.DataProcessing
+import preprocessing.{DataProcessing, HistoricalDataManager}
 import readers.{DataFrameParquetReader, DataframeCsvReader}
 import transformers.{DataConverter, DataFiltering}
 import validator.{ColumnValidator, DfValidator}
@@ -22,7 +22,7 @@ abstract class FlightAnalizerJob(spark: SparkSession, jobConfig: JobConfig) exte
   protected val cnvrt: DataConverter = new DataConverter
   protected val dataProcessing: DataProcessing = new DataProcessing(validator)
   protected val yearOfAnalysis: Int = cnvrt.getYearOfAnalysis(flightsDF)
-  protected val historicalData: HistoricalData = new HistoricalData
+  protected val historicalData: HistoricalDataManager = new HistoricalDataManager
 
   override def run(): Unit = {
 

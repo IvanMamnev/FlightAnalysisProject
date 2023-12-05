@@ -15,19 +15,19 @@ class PopularAirportsJob(spark: SparkSession, jobConfig: JobConfig) extends Flig
   private val pathOfHistoricalData: String = s"$pathOfAirportFlightsCounting/historical_data"
   private val pathOfTopAirports: String = s"$pathOfAirportFlightsCounting/topAirports"
   private val pathOfTempData: String = s"src/main/resources/temp/$yearOfAnalysis/airport_flights_counting"
-  private val checkDirectory: Boolean = historicalData.checkDirectory(pathOfAirportFlightsCounting)
-  private val airportFlightsCounting: DataFrame => DataFrame = ag.airportFlightsCounting("COUNT_FLIGHTS")
+  private val hasDirectory: Boolean = historicalData.checkDirectory(pathOfAirportFlightsCounting)
+  private val airportFlightsCounting: DataFrame => DataFrame = ag.aggregationByColumn(Seq(DfColumn.ORIGIN_AIRPORT), "COUNT_FLIGHTS")
   private val top10Airports: DataFrame => DataFrame = f.filterTop10("COUNT_FLIGHTS", "desc")
   private val filterNotCancelled: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.NotCancelledCondition)
-  private val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
-  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, checkHistoricalData, readerParquet, writerParquet)
+  private val hasHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
+  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, hasHistoricalData, readerParquet, writerParquet)
 
   private val airportFlightsDF: DataFrame = flightsDF
     .transform(filterNotCancelled)
     .transform(airportFlightsCounting)
 
   private val aggregatedDataForTopAirportsDF: DataFrame = {
-    if(checkDirectory){
+    if(hasDirectory){
       val rawDataDF: DataFrame = historicalData.initWithHistoricalData(
         readerParquet,
         Seq(DfColumn.ORIGIN_AIRPORT),

@@ -6,6 +6,7 @@ import readers.DataframeCsvReader
 import schemas.FlightsSchema
 import writers.{DataframeCsvWriter, DataframeParquetWriter}
 
+import com.example.constants.ErrorMessage
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SaveMode
 
@@ -18,7 +19,7 @@ object FlightAnalyzer extends SessionWrapper {
 
   def main(args: Array[String]): Unit = {
 
-    require(args.length == 1, "Specify the correct input data (the path for flights.csv)")
+    require(args.length == 1, ErrorMessage.NotEnoughArguments)
 
     val job = new GeneralJob(
       spark, JobConfig(

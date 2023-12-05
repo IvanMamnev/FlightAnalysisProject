@@ -1,4 +1,5 @@
 package com.example
+package preprocessing
 
 import readers.DataFrameParquetReader
 
@@ -6,7 +7,7 @@ import org.apache.spark.sql.DataFrame
 
 import java.nio.file.{Files, Path, Paths}
 
-class HistoricalData {
+class HistoricalDataManager {
 
   def checkDirectory(directory: String): Boolean = {
 

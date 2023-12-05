@@ -15,22 +15,23 @@ class TopOnTimeAirlines(spark: SparkSession, jobConfig: JobConfig) extends Fligh
   private val pathOfHistoricalData: String = s"$pathOfAirlineFlightsCounting/historical_data"
   private val pathOfTopAirlines: String = s"$pathOfAirlineFlightsCounting/topAirlines"
   private val pathOfTempData: String = s"src/main/resources/temp/$yearOfAnalysis/airline_flights_counting"
-  private val airlineFlightsCounting: DataFrame => DataFrame = ag.airlineFlightsCounting("FLIGHTS_WITHOUT_DELAYS")
+  private val airlineFlightsCounting: DataFrame => DataFrame = ag
+    .aggregationByColumn(Seq(DfColumn.AIRLINE), "FLIGHTS_WITHOUT_DELAYS")
   private val top10Airlines: DataFrame => DataFrame = f.filterTop10("FLIGHTS_WITHOUT_DELAYS", "desc")
   private val filterOnTimeDeparture: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.OnTimeDepartureCondition)
   private val filterOnTimeArrival: DataFrame => DataFrame = f.filterWithCondition(FilterCondition.OnTimeArrivalCondition)
-  private val checkHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
-  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, checkHistoricalData, readerParquet, writerParquet)
+  private val hasHistoricalData: Boolean = historicalData.checkDirectory(pathOfHistoricalData)
+  private val historicalWriter: HistoricalParquetWriter = new HistoricalParquetWriter(pathOfTempData, hasHistoricalData, readerParquet, writerParquet)
 
   private val airlineFlightsDF: DataFrame = flightsDF
     .transform(filterOnTimeDeparture)
     .transform(filterOnTimeArrival)
     .transform(airlineFlightsCounting)
 
-  private val checkDirectory: Boolean = historicalData.checkDirectory(pathOfAirlineFlightsCounting)
+  private val hasDirectory: Boolean = historicalData.checkDirectory(pathOfAirlineFlightsCounting)
 
   private val aggregatedDataForTopAirlinesDF: DataFrame = {
-    if(checkDirectory){
+    if(hasDirectory){
       val rawDataDF: DataFrame = historicalData.initWithHistoricalData(
         readerParquet,
         Seq(DfColumn.AIRLINE),

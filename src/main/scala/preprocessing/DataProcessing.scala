@@ -47,6 +47,11 @@ class DataProcessing(validator: DfValidator) {
       newColumns
     )
   }
+  private def addPercent(columns: Seq[Column])(df: DataFrame): DataFrame = {
+    val percentCol = columns(2)/columns(3)*lit(100)
+    df.withColumn("PERCENT", percentCol)
+      .select(columns: _*)
+  }
   def combineData(columns: Seq[String])(df: DataFrame): DataFrame = {
     validator.validateColumnPresence(columns)(df)
     columns match {
@@ -62,15 +67,17 @@ class DataProcessing(validator: DfValidator) {
             (valueOfTotalTime, historicalValueOfTotalTime)
           )
         )
-        df.transform(sumOfColumns)
-        .withColumn("PERCENT", col(valueOfTime)/col(valueOfTotalTime)*lit(100))
-        .select(
-          col(name),
-          col(valueOfFlights),
-          col(valueOfTime),
-          col(valueOfTotalTime),
-          col("PERCENT")
+        val withPercent: DataFrame => DataFrame = addPercent(
+          Seq(
+            col(name),
+            col(valueOfFlights),
+            col(valueOfTime),
+            col(valueOfTotalTime),
+            col("PERCENT")
+          )
         )
+        df.transform(sumOfColumns)
+          .transform(withPercent)
 
       case _ =>
         val columnForSum: Seq[String] = columns.takeRight(2)
